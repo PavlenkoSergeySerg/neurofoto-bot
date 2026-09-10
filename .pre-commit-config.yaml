@@ -1,0 +1,27 @@
+# "Вахтёры" проекта: срабатывают автоматически на каждый git commit.
+# Windows-адаптация раздела 4 МАСТЕР-ДОКУМЕНТА (правило 19):
+# без Go/Docker/bash — только системный бинарник и Python из .venv.
+repos:
+  # ВАХТЁР 1: gitleaks — ищет токены/ключи в том, что идёт в коммит
+  - repo: local
+    hooks:
+      - id: gitleaks
+        name: "gitleaks: поиск секретов в коммите"
+        entry: gitleaks git --staged --verbose --redact
+        language: system        # берём установленный в системе gitleaks.exe
+        pass_filenames: false   # gitleaks сам смотрит, что в stage
+
+      # ВАХТЁР 2: запрет коммита опасных файлов (.env, *.pem, *.key, ...)
+      - id: forbid-sensitive-files
+        name: forbid committing secret-bearing files
+        entry: python scripts/forbid_sensitive_files.py
+        language: system        # python из активной .venv
+        pass_filenames: false
+
+  # ВАХТЁР 3: detect-secrets — второе мнение с базовой линией
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: ["--baseline", ".secrets.baseline"]
+        exclude: ^(\.venv/|__pycache__/|\.secrets\.baseline)
